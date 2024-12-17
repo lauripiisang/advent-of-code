@@ -19,7 +19,7 @@ class PrettyLogger:
 
     def pretty(text, color, end=None):
         prefix = "\033[38;5;"
-        print(f"{prefix}{color}m{text}{PrettyLogger.reset}", end="", flush=True)
+        print(f"{prefix}{color}m{text}{PrettyLogger.reset}", end="")
 
     def logId(text, id):
         colors = PrettyLogger.colors()
@@ -50,6 +50,21 @@ def downLeftDiagonally(startRow, startCol):
     return [[startRow + i, startCol - i] for i in range(0, 4)]
 
 
+def rangeCross(startRow, startCol):
+    return [
+        [
+            [startRow, startCol],
+            [startRow + 1, startCol + 1],
+            [startRow + 2, startCol + 2],
+        ],
+        [
+            [startRow + 2, startCol],
+            [startRow + 1, startCol + 1],
+            [startRow, startCol + 2],
+        ],
+    ]
+
+
 sampleMatches = [
     downAcrossDiagonally(0, 4),
     across(0, 5),
@@ -72,7 +87,10 @@ sampleMatches = [
 ]
 foundXmases = []
 
-enabledFiles = ["day4-1-sample.txt", "day4.txt"]
+enabledFiles = [
+    "day4-1-sample.txt",
+    "day4.txt"
+]
 
 
 # get the rows and columns which have xmas in them
@@ -114,24 +132,66 @@ def findXmas(block: list[str]):
     return xmases
 
 
+def findCrossMas(block: list[str]):
+    xmases = []
+    for row in range(len(block)):
+        for col in range(len(block[row])):
+            char = block[row][col]
+            if not char in ["M", "S"]:
+                continue
+            ranges = rangeCross(row, col)
+            word1 = ""
+            word2 = ""
+            for testRow, testCol in ranges[0]:
+                if testRow < 0 or testCol < 0 or testCol > len(block[0]) - 1:
+                    continue
+                try:
+                    word1 += block[testRow][testCol]
+                except:
+                    pass
+            for testRow, testCol in ranges[1]:
+                if testRow < 0 or testCol < 0 or testCol > len(block[0]) - 1:
+                    continue
+                try:
+                    word2 += block[testRow][testCol]
+                except:
+                    pass
+            if word1 in ["MAS", "SAM"] and word2 in ["MAS", "SAM"]:
+                xmases += [ranges[0] + ranges[1]]
+    return xmases
+
+
 for file in enabledFiles:
     with open(file) as f:
-        PrettyLogger.pretty(f"Ho ho ho! Reading file  {file} for XMASes!\n", "28")
+        log(f"Ho ho ho! Reading file  {file} for XMASes!\n")
 
-        # for line in f:
         lines = [line for line in f]
-        # for i in range(0, len(lines) - 4):
-        # foundXmases += findXmas(lines[i : i + 4 :])
-        # blockwise optimization is possible
-        foundXmases = findXmas(lines)
-        for idLine, line in enumerate(lines):
-            PrettyLogger.pretty(f"L {idLine}".ljust(6), "255")
-            for idChar, char in enumerate(line):
-                try:
-                    m = [x for x in foundXmases if [idLine, idChar] in x][0]
-                    color = foundXmases.index(m)
-                    logId(char, color)
-                except:
-                    print(".", end="", flush=True) if char != "\n" else print()
-                    continue
-        PrettyLogger.pretty(f"\n\nFound {len(foundXmases)} XMASes!\n\n", "42")
+
+        for idx, part in enumerate([
+            {
+                "title": "Part 1 - XMAS",
+                "solver": findXmas,
+                "completed": "found {} XMASes",
+            },
+            {
+                "title": "Part 2 - X-MAS (Cross-Mas)",
+                "solver": findCrossMas,
+                "completed": "found {} X-MASes (Crossmases :D)",
+            },
+        ]):
+            idx +=1
+            logId(f"Solving {part['title']}\n\n", idx)
+            solution = part["solver"](lines)
+
+            for idLine, line in enumerate(lines):
+                PrettyLogger.pretty(f"L {idLine}".ljust(6), "255")
+                for idChar, char in enumerate(line):
+                    try:
+                        m = [x for x in solution if [idLine, idChar] in x][0]
+                        color = solution.index(m)
+                        logId(char, color)
+                    except:
+                        print(".", end="", flush=True) if char != "\n" else print()
+                        continue
+            print("\n")
+            logId(part["completed"].format(len(solution)) + "\n\n", idx)
